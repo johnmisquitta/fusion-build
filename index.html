@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -420,6 +420,79 @@
                 });
             });
         });
+    </script>
+</body>
+</html>
+ -->
+ <!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Sample Rate Detector</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Sample Rate Detector</h1>
+    <p>Click the button below to check your browser's default audio sampling rate:</p>
+    <button onclick="checkSampleRate()" id="checkButton">Check Sample Rate</button>
+    <div id="result"></div>
+
+    <script>
+        async function checkSampleRate() {
+            const button = document.getElementById('checkButton');
+            const result = document.getElementById('result');
+            
+            button.disabled = true;
+            result.textContent = 'Checking...';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                
+                result.innerHTML = `
+                    <p><strong>Sample Rate:</strong> ${audioContext.sampleRate} Hz</p>
+                    <p><strong>State:</strong> ${audioContext.state}</p>
+                `;
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+                
+                // Close the audio context
+                await audioContext.close();
+                
+            } catch (error) {
+                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>
+                    <p>Make sure you've granted microphone permissions to this page.</p>`;
+            }
+            
+            button.disabled = false;
+        }
     </script>
 </body>
 </html>
