@@ -1,73 +1,58 @@
-
- <!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Audio Sample Rate Detector</title>
-    <style>
-        body {
-            font-family: system-ui, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-        #result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 8px;
-            background-color: #f0f0f0;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 4px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            cursor: pointer;
-        }
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microphone Specifications Test</title>
 </head>
 <body>
-    <h1>Audio Sample Rate Detector</h1>
-    <p>Click the button below to check your browser's default audio sampling rate:</p>
-    <button onclick="checkSampleRate()" id="checkButton">Check Sample Rate</button>
-    <div id="result"></div>
+  <h1>Microphone Specifications Test</h1>
+  <button onclick="startAudio()">Start Microphone Access</button>
+  <div id="output"></div>
 
-    <script>
-        async function checkSampleRate() {
-            const button = document.getElementById('checkButton');
-            const result = document.getElementById('result');
-            
-            button.disabled = true;
-            result.textContent = 'Checking...';
+  <script>
+    async function startAudio() {
+      try {
+        // Request access to the microphone
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        // Create an audio context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Get sample rate from audio context
+        const sampleRate = audioContext.sampleRate;
+        document.getElementById("output").innerText = `Sample Rate: ${sampleRate} Hz`;
 
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(stream);
-                
-                result.innerHTML = `
-                    <p><strong>Sample Rate:</strong> ${audioContext.sampleRate} Hz</p>
-                    <p><strong>State:</strong> ${audioContext.state}</p>
-                `;
+        // Create an audio source from the stream
+        const source = audioContext.createMediaStreamSource(stream);
 
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
-                
-                // Close the audio context
-                await audioContext.close();
-                
-            } catch (error) {
-                result.innerHTML = `<p style="color: red;">Error: ${error.message}</p>
-                    <p>Make sure you've granted microphone permissions to this page.</p>`;
-            }
-            
-            button.disabled = false;
+        // Use an analyser to capture audio data
+        const analyser = audioContext.createAnalyser();
+        source.connect(analyser);
+
+        // Process the audio data
+        analyser.fftSize = 2048;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Float32Array(bufferLength);
+        
+        // Capture some audio data
+        function analyzeAudio() {
+          analyser.getFloatFrequencyData(dataArray);
+          // Here you could analyze `dataArray` to infer characteristics of the audio
+          // This won't give you specific hardware details but can give insight into quality.
+          
+          // Display data (for example purposes)
+          console.log(dataArray); // You can check the audio data in the console
         }
-    </script>
+
+        // Call analyzeAudio regularly to check audio data
+        setInterval(analyzeAudio, 1000);
+
+      } catch (error) {
+        console.error("Error accessing microphone:", error);
+        document.getElementById("output").innerText = "Microphone access denied or not supported.";
+      }
+    }
+  </script>
 </body>
 </html>
