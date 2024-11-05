@@ -13,39 +13,59 @@
   <script>
     async function startAudio() {
       try {
-        // Request access to the microphone
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Request access to the microphone with specific constraints
+        const constraints = {
+          audio: {
+            sampleRate: 44100,        // Request a sample rate of 44100 Hz (if available)
+            channelCount: 2,          // Request stereo audio (2 channels) if available
+            echoCancellation: true    // Enable echo cancellation if available
+          }
+        };
         
-        // Create an audio context
+        // Request audio stream
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Display MediaTrack constraints (actual configuration used by the browser)
+        const audioTracks = stream.getAudioTracks();
+        const trackSettings = audioTracks[0].getSettings();
+        document.getElementById("output").innerHTML = `
+          <p><strong>Sample Rate:</strong> ${trackSettings.sampleRate || 'Not specified'}</p>
+          <p><strong>Channel Count:</strong> ${trackSettings.channelCount || 'Not specified'}</p>
+          <p><strong>Echo Cancellation:</strong> ${trackSettings.echoCancellation || 'Not specified'}</p>
+          <p><strong>Device ID:</strong> ${audioTracks[0].getSettings().deviceId || 'Not accessible'}</p>
+        `;
+
+        // Enumerate devices to identify microphone info
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const microphoneDevices = devices.filter(device => device.kind === 'audioinput');
+        microphoneDevices.forEach((device, index) => {
+          document.getElementById("output").innerHTML += `
+            <p><strong>Microphone ${index + 1}:</strong> ${device.label || 'Label not available'} (ID: ${device.deviceId})</p>
+          `;
+        });
+
+        // Create an audio context and get the sample rate
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Get sample rate from audio context
         const sampleRate = audioContext.sampleRate;
-        document.getElementById("output").innerText = `Sample Rate: ${sampleRate} Hz`;
+        document.getElementById("output").innerHTML += `<p><strong>Audio Context Sample Rate:</strong> ${sampleRate} Hz</p>`;
 
-        // Create an audio source from the stream
+        // Connect audio source and setup analyser
         const source = audioContext.createMediaStreamSource(stream);
-
-        // Use an analyser to capture audio data
         const analyser = audioContext.createAnalyser();
         source.connect(analyser);
 
-        // Process the audio data
+        // Configure AnalyserNode properties
         analyser.fftSize = 2048;
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Float32Array(bufferLength);
         
-        // Capture some audio data
+        // Display real-time frequency data (console logging for demo purposes)
         function analyzeAudio() {
           analyser.getFloatFrequencyData(dataArray);
-          // Here you could analyze `dataArray` to infer characteristics of the audio
-          // This won't give you specific hardware details but can give insight into quality.
-          
-          // Display data (for example purposes)
-          console.log(dataArray); // You can check the audio data in the console
+          console.log("Frequency Data:", dataArray); // This outputs frequency data for analysis
         }
-
-        // Call analyzeAudio regularly to check audio data
+        
+        // Call analyzeAudio at intervals
         setInterval(analyzeAudio, 1000);
 
       } catch (error) {
